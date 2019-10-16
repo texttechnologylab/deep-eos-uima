@@ -2,6 +2,7 @@ package org.biofid.deep_eos;
 
 import de.tudarmstadt.ukp.dkpro.core.api.segmentation.type.Sentence;
 import jep.*;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.uima.UimaContext;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
 import org.apache.uima.cas.CAS;
@@ -12,26 +13,24 @@ import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.resource.ResourceInitializationException;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Properties;
 
 /**
  * Created on 09.10.19.
  */
 public class DeepEosTagger extends CasConsumer_ImplBase {
 	
-	public static final String PARAM_LANGUAGE = "language";
+	public static final String PARAM_MODEL_NAME = "modelname";
 	@ConfigurationParameter(
-			name = PARAM_LANGUAGE,
+			name = PARAM_MODEL_NAME,
 			defaultValue = "de"
 	)
-	private String language;
+	private String modelname;
 	
 	private Interpreter interp;
 	
@@ -40,37 +39,37 @@ public class DeepEosTagger extends CasConsumer_ImplBase {
 	public void initialize(UimaContext context) throws ResourceInitializationException {
 		super.initialize(context);
 		try {
-			Map<String, ModelConfig> modelConfigHashMap = loadLangMap();
-			if (!modelConfigHashMap.containsKey(language)) {
-				throw new Exception("The language '" + language + "' is not a valid DeepEOS model language!");
+			Properties modelConfigHashMap = loadModelProperties();
+			if (!modelConfigHashMap.containsKey(modelname+".model")) {
+				throw new Exception("The language '" + modelname + "' is not a valid DeepEOS model language!");
 			} else {
-				ModelConfig modelConfig = modelConfigHashMap.get(language);
+				Properties modelProperties = loadModelProperties();
+				ModelConfig modelConfig = new ModelConfig(modelProperties, modelname);
 				PyConfig config = new PyConfig();
-				config.setPythonHome(Paths.get(System.getenv("HOME")+"/.conda/envs/keras/").toAbsolutePath().toString());
+				config.setPythonHome(Paths.get(System.getenv("HOME") + "/.conda/envs/keras/").toAbsolutePath().toString());
 				MainInterpreter.setInitParams(config);
 				
-				MainInterpreter.setJepLibraryPath(System.getenv("HOME")+"/.conda/envs/keras/lib/python3.7/site-packages/jep/libjep.so");
+				MainInterpreter.setJepLibraryPath(System.getenv("HOME") + "/.conda/envs/keras/lib/python3.7/site-packages/jep/libjep.so");
 				interp = new SharedInterpreter();
 				interp.exec("import os");
 				interp.exec("import sys");
 				interp.exec("sys.path.append('src/main/python')"); // FIXME: fix this relative path
 				interp.exec("from model import DeepEosModel");
-				interp.exec(String.format("model = DeepEosModel(model_base_path='%s', window_size=%d)", modelConfig.path, modelConfig.windowSize));
+				System.out.println(modelConfig.modelPath);
+				interp.exec(String.format("model = DeepEosModel(model_base_path='%s', window_size=%d)", modelConfig.modelPath, modelConfig.windowSize));
 			}
 		} catch (Exception e) {
 			throw new ResourceInitializationException(e);
 		}
 	}
 	
-	private Map<String, ModelConfig> loadLangMap() throws IOException {
+	private Properties loadModelProperties() throws IOException {
 		HashMap<String, ModelConfig> modelConfigHashMap = new HashMap<>();
-		try (BufferedReader reader = new BufferedReader(new InputStreamReader(getClass().getClassLoader().getResourceAsStream("models.map")))) {
-			for (String s : reader.lines().collect(Collectors.toList())) {
-				String[] arr = s.split("\\s+", 3);
-				modelConfigHashMap.put(arr[0], new ModelConfig(Paths.get(arr[1]).toAbsolutePath().toString(), Integer.parseInt(arr[2])));
-			}
+		Properties properties = new Properties();
+		try (InputStream input = getClass().getClassLoader().getResourceAsStream("models.properties")) {
+			properties.load(input);
 		}
-		return modelConfigHashMap;
+		return properties;
 	}
 	
 	@Override
@@ -107,12 +106,19 @@ public class DeepEosTagger extends CasConsumer_ImplBase {
 	}
 	
 	private static class ModelConfig {
-		final String path;
+		final String modelPath;
+		final String vocabPath;
 		final int windowSize;
 		
-		ModelConfig(String path, int windowSize) {
-			this.path = path;
-			this.windowSize = windowSize;
+		
+		ModelConfig(Properties properties, String modelName) {
+			modelPath = properties.getProperty(modelName + ".model");
+			if (properties.containsKey(modelName + ".vocab")) {
+				vocabPath = properties.getProperty(modelName + ".vocab");
+			} else {
+				vocabPath = StringUtils.substringAfterLast(modelPath, ".") + ".vocab";
+			}
+			windowSize = Integer.parseInt(properties.getProperty(modelName + ".window_size", "5"));
 		}
 	}
 }
