@@ -1,4 +1,0 @@
-de  /resources/nlp/models/deep-eos/de/de.wiki.100k.lstm 4
-en  /resources/nlp/models/deep-eos/en/en.wiki.100k.lstm 4
-es  /resources/nlp/models/deep-eos/es/es.wiki.100k.lstm 4
-biofid  /resources/nlp/models/deep-eos/de/de.wiki.100k+biofid.lstm  4
