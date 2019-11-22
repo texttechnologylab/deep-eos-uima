@@ -102,7 +102,7 @@ public class DeepEosTagger extends CasConsumer_ImplBase {
 					System.out.println("   text:" + sent.getCoveredText());
 				}
 			}
-		} catch (JepException e) {
+		} catch (JepException | ClassCastException e) {
 			throw new AnalysisEngineProcessException(e);
 		} catch (CASException e) {
 			e.printStackTrace();
