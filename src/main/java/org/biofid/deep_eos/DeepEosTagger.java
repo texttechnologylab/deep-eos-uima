@@ -17,7 +17,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Properties;
 
 /**
@@ -40,7 +39,7 @@ public class DeepEosTagger extends CasConsumer_ImplBase {
 		super.initialize(context);
 		try {
 			Properties modelConfigHashMap = loadModelProperties();
-			if (!modelConfigHashMap.containsKey(modelname+".model")) {
+			if (!modelConfigHashMap.containsKey(modelname + ".model")) {
 				throw new Exception("The language '" + modelname + "' is not a valid DeepEOS model language!");
 			} else {
 				Properties modelProperties = loadModelProperties();
@@ -56,7 +55,7 @@ public class DeepEosTagger extends CasConsumer_ImplBase {
 				interp.exec("sys.path.append('src/main/python')"); // FIXME: fix this relative path
 				interp.exec("from model import DeepEosModel");
 				System.out.println(modelConfig.modelPath);
-				interp.exec(String.format("model = DeepEosModel(model_base_path='%s', window_size=%d)", modelConfig.modelPath, modelConfig.windowSize));
+				interp.exec(String.format("model = DeepEosModel(model_base_path='%s', window_size=%d)", modelConfig.basePath, modelConfig.windowSize));
 			}
 		} catch (Exception e) {
 			throw new ResourceInitializationException(e);
@@ -64,7 +63,6 @@ public class DeepEosTagger extends CasConsumer_ImplBase {
 	}
 	
 	private Properties loadModelProperties() throws IOException {
-		HashMap<String, ModelConfig> modelConfigHashMap = new HashMap<>();
 		Properties properties = new Properties();
 		try (InputStream input = getClass().getClassLoader().getResourceAsStream("models.properties")) {
 			properties.load(input);
@@ -106,6 +104,7 @@ public class DeepEosTagger extends CasConsumer_ImplBase {
 	}
 	
 	private static class ModelConfig {
+		final String basePath;
 		final String modelPath;
 		final String vocabPath;
 		final int windowSize;
@@ -113,6 +112,7 @@ public class DeepEosTagger extends CasConsumer_ImplBase {
 		
 		ModelConfig(Properties properties, String modelName) {
 			modelPath = properties.getProperty(modelName + ".model");
+			basePath = StringUtils.substringBefore(StringUtils.substringBefore(modelPath, ".model"), ".hd5f");
 			if (properties.containsKey(modelName + ".vocab")) {
 				vocabPath = properties.getProperty(modelName + ".vocab");
 			} else {

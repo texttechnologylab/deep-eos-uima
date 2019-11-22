@@ -5,7 +5,7 @@ import org.apache.uima.fit.factory.JCasFactory;
 import org.apache.uima.fit.pipeline.SimplePipeline;
 import org.apache.uima.jcas.JCas;
 import org.biofid.deep_eos.DeepEosTagger;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 /**
  * Created on 09.10.19.

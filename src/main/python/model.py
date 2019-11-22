@@ -26,7 +26,10 @@ class DeepEosModel:
     def __init__(self, model_base_path, window_size=4, batch_size=32):
         print_flag('Loading deep-eos model')
         self.char_2_id_dict = util.load_vocab(model_base_path + ".vocab")
-        self.deep_eos_model = load_model(model_base_path + ".hd5f")
+        if os.path.exists(model_base_path + ".hd5f"):
+            self.deep_eos_model = load_model(model_base_path + ".hd5f")
+        else:
+            self.deep_eos_model = load_model(model_base_path + ".model")
         self.deep_eos_graph = tf.get_default_graph()
         self.window_size = window_size
         self.batch_size = batch_size
