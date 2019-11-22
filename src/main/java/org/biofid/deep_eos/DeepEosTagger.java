@@ -7,7 +7,7 @@ import org.apache.uima.UimaContext;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
 import org.apache.uima.cas.CAS;
 import org.apache.uima.cas.CASException;
-import org.apache.uima.fit.component.CasConsumer_ImplBase;
+import org.apache.uima.fit.component.CasAnnotator_ImplBase;
 import org.apache.uima.fit.descriptor.ConfigurationParameter;
 import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
@@ -22,7 +22,7 @@ import java.util.Properties;
 /**
  * Created on 09.10.19.
  */
-public class DeepEosTagger extends CasConsumer_ImplBase {
+public class DeepEosTagger extends CasAnnotator_ImplBase {
 	
 	public static final String PARAM_MODEL_NAME = "modelname";
 	@ConfigurationParameter(
