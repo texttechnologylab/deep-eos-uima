@@ -45,11 +45,10 @@ public class DeepEosTagger extends CasConsumer_ImplBase {
 	public void initialize(UimaContext context) throws ResourceInitializationException {
 		super.initialize(context);
 		try {
-			Properties modelConfigHashMap = loadModelProperties();
-			if (!modelConfigHashMap.containsKey(modelname + ".model")) {
+			Properties modelProperties = loadModelProperties();
+			if (!modelProperties.containsKey(modelname + ".model")) {
 				throw new Exception("The language '" + modelname + "' is not a valid DeepEOS model language!");
 			} else {
-				Properties modelProperties = loadModelProperties();
 				ModelConfig modelConfig = new ModelConfig(modelProperties, modelname);
 				PyConfig config = new PyConfig();
 				config.setPythonHome(Paths.get(System.getenv("HOME") + "/.conda/envs/keras/").toAbsolutePath().toString());
@@ -128,7 +127,7 @@ public class DeepEosTagger extends CasConsumer_ImplBase {
 		
 		ModelConfig(Properties properties, String modelName) {
 			modelPath = properties.getProperty(modelName + ".model");
-			basePath = StringUtils.substringBefore(StringUtils.substringBefore(modelPath, ".model"), ".hd5f");
+			basePath = StringUtils.substringBefore(StringUtils.substringBefore(modelPath, ".model"), ".hdf5");
 			if (properties.containsKey(modelName + ".vocab")) {
 				vocabPath = properties.getProperty(modelName + ".vocab");
 			} else {
