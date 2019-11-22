@@ -31,6 +31,13 @@ public class DeepEosTagger extends CasConsumer_ImplBase {
 	)
 	private String modelname;
 	
+	public static final String PARAM_VERBOSE = "verbose";
+	@ConfigurationParameter(
+			name = PARAM_VERBOSE,
+			defaultValue = "false"
+	)
+	private Boolean verbose;
+	
 	private Interpreter interp;
 	
 	
@@ -77,15 +84,24 @@ public class DeepEosTagger extends CasConsumer_ImplBase {
 			JCas jCas = cas.getJCas();
 			ArrayList<Long> result = (ArrayList<Long>) interp.invoke("model.tag", documentText);
 			int begin = 0;
-			for (Long end : result) {
-				Sentence sentence = new Sentence(jCas, begin, Math.toIntExact(end));
+			for (int i = 0; i < result.size(); i++) {
+				Long end = result.get(i);
+				Sentence sentence = new Sentence(jCas, begin, Math.toIntExact(end) + 1);
+				sentence.setId(String.valueOf(i));
 				jCas.addFsToIndexes(sentence);
-				begin = Math.toIntExact(end);
+				begin = Math.toIntExact(end) + 1;
 			}
 			Sentence sentence = new Sentence(jCas, begin, jCas.getDocumentText().length());
+			sentence.setId(String.valueOf(result.size()));
 			jCas.addFsToIndexes(sentence);
 			
-			System.out.println(JCasUtil.select(jCas, Sentence.class));
+			if (verbose) {
+				System.out.println();
+				for (Sentence sent : JCasUtil.select(jCas, Sentence.class)) {
+					System.out.print(sent);
+					System.out.println("   text:" + sent.getCoveredText());
+				}
+			}
 		} catch (JepException e) {
 			throw new AnalysisEngineProcessException(e);
 		} catch (CASException e) {
