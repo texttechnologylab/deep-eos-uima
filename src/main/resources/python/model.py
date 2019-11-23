@@ -43,7 +43,7 @@ class DeepEosModel:
         eos_pos = []
         for batch_no in range(int(len(potential_eos_list) / self.batch_size) + 1):
             i = batch_no * self.batch_size
-            j = min(len(potential_eos_list), i + self.batch_size) - 1
+            j = min(len(potential_eos_list), i + self.batch_size)
             batch = potential_eos_list[i:j]
 
             eos_positions = [eos_position for eos_position, _ in batch]
