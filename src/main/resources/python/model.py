@@ -1,6 +1,8 @@
 import os
 from typing import List
 
+import numpy as np
+
 from utils import Utils
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -26,7 +28,10 @@ class DeepEosModel:
     def __init__(self, model_base_path, window_size=4, batch_size=32):
         print_flag('Loading deep-eos model')
         self.char_2_id_dict = util.load_vocab(model_base_path + ".vocab")
-        self.deep_eos_model = load_model(model_base_path + ".hd5f")
+        if os.path.exists(model_base_path + ".hdf5"):
+            self.deep_eos_model = load_model(model_base_path + ".hdf5")
+        else:
+            self.deep_eos_model = load_model(model_base_path + ".model")
         self.deep_eos_graph = tf.get_default_graph()
         self.window_size = window_size
         self.batch_size = batch_size
@@ -36,20 +41,25 @@ class DeepEosModel:
         potential_eos_list = util.build_potential_eos_list(text, self.window_size)
 
         eos_pos = []
-        for potential_eos in potential_eos_list:
-            eos_position, char_sequence = potential_eos
-            data_set = util.build_data_set([(-1.0, char_sequence)], self.char_2_id_dict, self.window_size)
+        for batch_no in range(int(len(potential_eos_list) / self.batch_size) + 1):
+            i = batch_no * self.batch_size
+            j = min(len(potential_eos_list), i + self.batch_size)
+            batch = potential_eos_list[i:j]
+            batch_size = j - i
 
-            if len(data_set) > 0:
-                label, feature_vector = data_set[0]
+            eos_positions = [eos_position for eos_position, _ in batch]
+            char_sequences = [(-1.0, char_sequence) for _, char_sequence in batch]
+            data_set = util.build_data_set(char_sequences, self.char_2_id_dict, self.window_size)
+            features = np.array([i[1] for i in data_set])
 
-                with self.deep_eos_graph.as_default():
-                    predicted = self.deep_eos_model.predict(
-                        feature_vector.reshape(1, 2 * self.window_size + 1),
-                        batch_size=self.batch_size,
-                        verbose=0)
+            predicted = self.deep_eos_model.predict(
+                features,
+                batch_size=batch_size,
+                verbose=0)
 
-                    if predicted[0][0] >= 0.5:
-                        eos_pos.append(int(eos_position))
+            for i in range(batch_size):
+                if predicted[i][0] >= 0.5:
+                    eos_pos.append(int(eos_positions[i]))
+
 
         return eos_pos
