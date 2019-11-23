@@ -40,6 +40,14 @@ public class DeepEosTagger extends CasAnnotator_ImplBase {
 	
 	private Interpreter interp;
 	
+	public static final String PARAM_PYTHON_SRC = "pythonSrcPath";
+	@ConfigurationParameter(
+			name = PARAM_PYTHON_SRC,
+			defaultValue = "src/main/python",
+			mandatory = false
+	)
+	private String pythonSrcPath;
+	
 	
 	@Override
 	public void initialize(UimaContext context) throws ResourceInitializationException {
@@ -58,7 +66,7 @@ public class DeepEosTagger extends CasAnnotator_ImplBase {
 				interp = new SharedInterpreter();
 				interp.exec("import os");
 				interp.exec("import sys");
-				interp.exec("sys.path.append('src/main/python')"); // FIXME: fix this relative path
+				interp.exec("sys.path.append('" + pythonSrcPath + "')");
 				interp.exec("from model import DeepEosModel");
 				System.out.println(modelConfig.modelPath);
 				interp.exec(String.format("model = DeepEosModel(model_base_path='%s', window_size=%d)", modelConfig.basePath, modelConfig.windowSize));

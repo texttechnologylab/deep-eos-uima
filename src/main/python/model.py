@@ -43,23 +43,24 @@ class DeepEosModel:
         eos_pos = []
         for batch_no in range(int(len(potential_eos_list) / self.batch_size) + 1):
             i = batch_no * self.batch_size
-            j = min(len(potential_eos_list), i + self.batch_size)
+            j = min(len(potential_eos_list), i + self.batch_size) - 1
             batch = potential_eos_list[i:j]
-            batch_size = j - i
 
             eos_positions = [eos_position for eos_position, _ in batch]
             char_sequences = [(-1.0, char_sequence) for _, char_sequence in batch]
             data_set = util.build_data_set(char_sequences, self.char_2_id_dict, self.window_size)
             features = np.array([i[1] for i in data_set])
+            batch_size = len(features)
 
-            predicted = self.deep_eos_model.predict(
-                features,
-                batch_size=batch_size,
-                verbose=0)
+            if batch_size > 0:
+                predicted = self.deep_eos_model.predict(
+                    features,
+                    batch_size=batch_size,
+                    verbose=0)
 
-            for i in range(batch_size):
-                if predicted[i][0] >= 0.5:
-                    eos_pos.append(int(eos_positions[i]))
+                for i in range(batch_size):
+                    if predicted[i][0] >= 0.5:
+                        eos_pos.append(int(eos_positions[i]))
 
 
         return eos_pos
