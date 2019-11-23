@@ -175,7 +175,7 @@
                 <directory>src/main/resources</directory>
             </resource>
             <resource>
-                <directory>src/main/python</directory>
+                <directory>src/main/resources/python</directory>
                 <targetPath>${project.build.directory}/python</targetPath>
                 <includes>
                     <include>**/*.py</include>
