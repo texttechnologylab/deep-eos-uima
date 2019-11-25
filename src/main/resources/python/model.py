@@ -49,7 +49,7 @@ class DeepEosModel:
             features = np.array([i[1] for i in data_set])
 
             predicted = self.deep_eos_model.predict(features)
-            for j in range(predicted.shape[0]):
+            for j in range(len(predicted) if type(predicted) is list else predicted.shape[0]):
                 if predicted[j][0] >= 0.5:
                     eos_pos.append(int(eos_positions[j]))
 

@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 /**
  * Created on 09.10.19.
@@ -109,7 +110,7 @@ public class DeepEosTagger extends CasAnnotator_ImplBase {
                 Sentence sentence = new Sentence(jCas, begin, Math.toIntExact(end) + 1);
                 sentence.setId(String.valueOf(i));
                 jCas.addFsToIndexes(sentence);
-                begin = Math.toIntExact(end) + 1;
+                begin = Math.toIntExact(end) + 2;
             }
             Sentence sentence = new Sentence(jCas, begin, jCas.getDocumentText().length());
             sentence.setId(String.valueOf(result.size()));
@@ -119,7 +120,7 @@ public class DeepEosTagger extends CasAnnotator_ImplBase {
                 System.out.println();
                 for (Sentence sent : JCasUtil.select(jCas, Sentence.class)) {
                     System.out.print(sent);
-                    System.out.println("   text:" + sent.getCoveredText());
+                    System.out.println("   text: \"" + sent.getCoveredText() + "\"");
                 }
             }
         } catch (JepException | ClassCastException e) {
