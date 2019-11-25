@@ -13,156 +13,168 @@ import org.apache.uima.fit.descriptor.ConfigurationParameter;
 import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.resource.ResourceInitializationException;
-import org.springframework.util.FileCopyUtils;
 import org.springframework.util.FileSystemUtils;
-import org.texttechnologylab.utilities.helper.TempFileHandler;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.Properties;
-import java.util.regex.Pattern;
 
 /**
  * Created on 09.10.19.
  */
 public class DeepEosTagger extends CasAnnotator_ImplBase {
-
-    public static final String PARAM_MODEL_NAME = "modelname";
-    @ConfigurationParameter(
-            name = PARAM_MODEL_NAME,
-            defaultValue = "de"
-    )
-    private String modelname;
-
-    public static final String PARAM_VERBOSE = "verbose";
-    @ConfigurationParameter(
-            name = PARAM_VERBOSE,
-            defaultValue = "false"
-    )
-    private Boolean verbose;
-
-    private Interpreter interp;
-
-    private static final String[] resourceFiles = new String[]{"python/model.py", "python/utils.py"};
-    private Path tempFolder;
-
-    @Override
-    public void initialize(UimaContext context) throws ResourceInitializationException {
-        super.initialize(context);
-        try {
-            tempFolder = Files.createTempDirectory(this.getClass().getSimpleName());
-            Properties modelProperties = loadModelProperties();
-            if (!modelProperties.containsKey(modelname + ".model")) {
-                throw new Exception("The language '" + modelname + "' is not a valid DeepEOS model language!");
-            } else {
-                extractResources();
-
-                ModelConfig modelConfig = new ModelConfig(modelProperties, modelname);
-                PyConfig config = new PyConfig();
-                config.setPythonHome(Paths.get(System.getenv("HOME") + "/.conda/envs/keras/").toAbsolutePath().toString());
-                MainInterpreter.setInitParams(config);
-
-                MainInterpreter.setJepLibraryPath(System.getenv("HOME") + "/.conda/envs/keras/lib/python3.7/site-packages/jep/libjep.so");
-                interp = new SharedInterpreter();
-                interp.exec("import os");
-                interp.exec("import sys");
-                interp.exec("sys.path.append('" + tempFolder.toAbsolutePath().toString() + "/python/')");
-                interp.exec("from model import DeepEosModel");
-                interp.exec(String.format("model = DeepEosModel(model_base_path='%s', window_size=%d)", modelConfig.basePath, modelConfig.windowSize));
-            }
-        } catch (Exception e) {
-            throw new ResourceInitializationException(e);
-        }
-    }
-
-    private void extractResources() throws IOException {
-        for (String fileName : resourceFiles) {
-            Path outPath = Paths.get(tempFolder.toString(), fileName);
-            Files.createDirectories(outPath.getParent());
-            try (InputStream resourceAsStream = this.getClass().getClassLoader().getResourceAsStream(fileName)) {
-                FileUtils.copyInputStreamToFile(Objects.requireNonNull(resourceAsStream), outPath.toFile());
-            }
-        }
-    }
-
-    private Properties loadModelProperties() throws IOException {
-        Properties properties = new Properties();
-        try (InputStream input = getClass().getClassLoader().getResourceAsStream("models.properties")) {
-            properties.load(input);
-        }
-        return properties;
-    }
-
-    @Override
-    public void process(CAS cas) throws AnalysisEngineProcessException {
-        String documentText = cas.getDocumentText();
-        try {
-            JCas jCas = cas.getJCas();
-            ArrayList<Long> result = (ArrayList<Long>) interp.invoke("model.tag", documentText);
-            int begin = 0;
-            for (int i = 0; i < result.size(); i++) {
-                Long end = result.get(i);
-                Sentence sentence = new Sentence(jCas, begin, Math.toIntExact(end) + 1);
-                sentence.setId(String.valueOf(i));
-                jCas.addFsToIndexes(sentence);
-                begin = Math.toIntExact(end) + 2;
-            }
-            Sentence sentence = new Sentence(jCas, begin, jCas.getDocumentText().length());
-            sentence.setId(String.valueOf(result.size()));
-            jCas.addFsToIndexes(sentence);
-
-            if (verbose) {
-                System.out.println();
-                for (Sentence sent : JCasUtil.select(jCas, Sentence.class)) {
-                    System.out.print(sent);
-                    System.out.println("   text: \"" + sent.getCoveredText() + "\"");
-                }
-            }
-        } catch (JepException | ClassCastException e) {
-            throw new AnalysisEngineProcessException(e);
-        } catch (CASException e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    public void destroy() {
-        try {
-            this.interp.close();
-        } catch (JepException e) {
-            e.printStackTrace();
-        }
-        try {
-            if (tempFolder != null) {
-                FileSystemUtils.deleteRecursively(tempFolder.toFile());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        super.destroy();
-    }
-
-    private static class ModelConfig {
-        final String basePath;
-        final String modelPath;
-        final String vocabPath;
-        final int windowSize;
-
-
-        ModelConfig(Properties properties, String modelName) {
-            modelPath = properties.getProperty(modelName + ".model");
-            basePath = StringUtils.substringBefore(StringUtils.substringBefore(modelPath, ".model"), ".hdf5");
-            if (properties.containsKey(modelName + ".vocab")) {
-                vocabPath = properties.getProperty(modelName + ".vocab");
-            } else {
-                vocabPath = StringUtils.substringAfterLast(modelPath, ".") + ".vocab";
-            }
-            windowSize = Integer.parseInt(properties.getProperty(modelName + ".window_size", "5"));
-        }
-    }
+	
+	public static final String PARAM_MODEL_NAME = "modelname";
+	@ConfigurationParameter(
+			name = PARAM_MODEL_NAME,
+			defaultValue = "de"
+	)
+	private String modelname;
+	
+	public static final String PARAM_VERBOSE = "verbose";
+	@ConfigurationParameter(
+			name = PARAM_VERBOSE,
+			defaultValue = "false"
+	)
+	private Boolean verbose;
+	
+	public static final String JEP_LIBRARY_PATH = "jep_library_path";
+	@ConfigurationParameter(mandatory = false, description = "libjep.so path. Must be an absolute path!" +
+			"If not given, will try to infer from environment variable.")
+	private String jep_library_path;
+	
+	public static final String JEP_PYTHON_HOME = "jep_python_home";
+	@ConfigurationParameter(mandatory = false, description = "Jep python home path. Must be an absolute path!" +
+			"If not given, will try to infer from environment variable.")
+	private String jep_python_home;
+	
+	private Interpreter interp;
+	
+	private static final String[] resourceFiles = new String[]{"python/model.py", "python/utils.py"};
+	private Path tempFolder;
+	
+	@Override
+	public void initialize(UimaContext context) throws ResourceInitializationException {
+		super.initialize(context);
+		try {
+			tempFolder = Files.createTempDirectory(this.getClass().getSimpleName());
+			Properties modelProperties = loadModelProperties();
+			if (!modelProperties.containsKey(modelname + ".model")) {
+				throw new Exception("The language '" + modelname + "' is not a valid DeepEOS model language!");
+			} else {
+				extractResources();
+				
+				ModelConfig modelConfig = new ModelConfig(modelProperties, modelname);
+				PyConfig config = new PyConfig();
+				if (jep_python_home == null)
+					jep_python_home = System.getenv("JEP_PYTHON_HOME");
+				config.setPythonHome(jep_python_home);
+				MainInterpreter.setInitParams(config);
+				
+				if (jep_library_path == null) {
+					jep_library_path = System.getenv("JEP_LIBRARY_PATH");
+				}
+				MainInterpreter.setJepLibraryPath(jep_library_path);
+				interp = new SharedInterpreter();
+				interp.exec("import os");
+				interp.exec("import sys");
+				interp.exec("sys.path.append('" + tempFolder.toAbsolutePath().toString() + "/python/')");
+				interp.exec("from model import DeepEosModel");
+				interp.exec(String.format("model = DeepEosModel(model_base_path='%s', window_size=%d)", modelConfig.basePath, modelConfig.windowSize));
+			}
+		} catch (Exception e) {
+			throw new ResourceInitializationException(e);
+		}
+	}
+	
+	private void extractResources() throws IOException {
+		for (String fileName : resourceFiles) {
+			Path outPath = Paths.get(tempFolder.toString(), fileName);
+			Files.createDirectories(outPath.getParent());
+			try (InputStream resourceAsStream = this.getClass().getClassLoader().getResourceAsStream(fileName)) {
+				FileUtils.copyInputStreamToFile(Objects.requireNonNull(resourceAsStream), outPath.toFile());
+			}
+		}
+	}
+	
+	private Properties loadModelProperties() throws IOException {
+		Properties properties = new Properties();
+		try (InputStream input = getClass().getClassLoader().getResourceAsStream("models.properties")) {
+			properties.load(input);
+		}
+		return properties;
+	}
+	
+	@Override
+	public void process(CAS cas) throws AnalysisEngineProcessException {
+		String documentText = cas.getDocumentText();
+		try {
+			JCas jCas = cas.getJCas();
+			ArrayList<Long> result = (ArrayList<Long>) interp.invoke("model.tag", documentText);
+			int begin = 0;
+			for (int i = 0; i < result.size(); i++) {
+				Long end = result.get(i);
+				Sentence sentence = new Sentence(jCas, begin, Math.toIntExact(end) + 1);
+				sentence.setId(String.valueOf(i));
+				jCas.addFsToIndexes(sentence);
+				begin = Math.toIntExact(end) + 2;
+			}
+			Sentence sentence = new Sentence(jCas, begin, jCas.getDocumentText().length());
+			sentence.setId(String.valueOf(result.size()));
+			jCas.addFsToIndexes(sentence);
+			
+			if (verbose) {
+				System.out.println();
+				for (Sentence sent : JCasUtil.select(jCas, Sentence.class)) {
+					System.out.print(sent);
+					System.out.println("   text: \"" + sent.getCoveredText() + "\"");
+				}
+			}
+		} catch (JepException | ClassCastException e) {
+			throw new AnalysisEngineProcessException(e);
+		} catch (CASException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	@Override
+	public void destroy() {
+		try {
+			this.interp.close();
+		} catch (JepException e) {
+			e.printStackTrace();
+		}
+		try {
+			if (tempFolder != null) {
+				FileSystemUtils.deleteRecursively(tempFolder.toFile());
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		super.destroy();
+	}
+	
+	private static class ModelConfig {
+		final String basePath;
+		final String modelPath;
+		final String vocabPath;
+		final int windowSize;
+		
+		
+		ModelConfig(Properties properties, String modelName) {
+			modelPath = properties.getProperty(modelName + ".model");
+			basePath = StringUtils.substringBefore(StringUtils.substringBefore(modelPath, ".model"), ".hdf5");
+			if (properties.containsKey(modelName + ".vocab")) {
+				vocabPath = properties.getProperty(modelName + ".vocab");
+			} else {
+				vocabPath = StringUtils.substringAfterLast(modelPath, ".") + ".vocab";
+			}
+			windowSize = Integer.parseInt(properties.getProperty(modelName + ".window_size", "5"));
+		}
+	}
 }
