@@ -1,6 +1,7 @@
-import numpy as np
 import os
 from typing import List
+
+import numpy as np
 from utils import Utils
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -41,19 +42,14 @@ class DeepEosModel:
         eos_pos = []
         for i in range(0, len(potential_eos_list), self.batch_size):
             batch = potential_eos_list[i:i + self.batch_size]
-            batch_size = len(batch)
 
             eos_positions = [eos_position for eos_position, _ in batch]
             char_sequences = [(-1.0, char_sequence) for _, char_sequence in batch]
             data_set = util.build_data_set(char_sequences, self.char_2_id_dict, self.window_size)
             features = np.array([i[1] for i in data_set])
 
-            predicted = self.deep_eos_model.predict(
-                features,
-                batch_size=batch_size,
-                verbose=0)
-
-            for j in range(batch_size):
+            predicted = self.deep_eos_model.predict(features)
+            for j in range(predicted.shape[0]):
                 if predicted[j][0] >= 0.5:
                     eos_pos.append(int(eos_positions[j]))
 
