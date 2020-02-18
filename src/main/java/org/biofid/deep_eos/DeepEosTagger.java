@@ -13,6 +13,7 @@ import org.apache.uima.fit.descriptor.ConfigurationParameter;
 import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.resource.ResourceInitializationException;
+import org.hucompute.textimager.uima.base.JepAnnotator;
 import org.springframework.util.FileSystemUtils;
 
 import java.io.IOException;
@@ -27,7 +28,7 @@ import java.util.Properties;
 /**
  * Created on 09.10.19.
  */
-public class DeepEosTagger extends CasAnnotator_ImplBase {
+public class DeepEosTagger extends JepAnnotator {
 	
 	public static final String PARAM_MODEL_NAME = "modelname";
 	@ConfigurationParameter(
@@ -43,18 +44,6 @@ public class DeepEosTagger extends CasAnnotator_ImplBase {
 	)
 	private Boolean verbose;
 	
-	public static final String JEP_LIBRARY_PATH = "jep_library_path";
-	@ConfigurationParameter(mandatory = false, description = "libjep.so path. Must be an absolute path!" +
-			"If not given, will try to infer from environment variable.")
-	private String jep_library_path;
-	
-	public static final String JEP_PYTHON_HOME = "jep_python_home";
-	@ConfigurationParameter(mandatory = false, description = "Jep python home path. Must be an absolute path!" +
-			"If not given, will try to infer from environment variable.")
-	private String jep_python_home;
-	
-	private Interpreter interp;
-	
 	private static final String[] resourceFiles = new String[]{"python/model.py", "python/utils.py"};
 	private Path tempFolder;
 	
@@ -68,22 +57,11 @@ public class DeepEosTagger extends CasAnnotator_ImplBase {
 				throw new Exception("The language '" + modelname + "' is not a valid DeepEOS model language!");
 			} else {
 				extractResources();
-				
 				ModelConfig modelConfig = new ModelConfig(modelProperties, modelname);
-				PyConfig config = new PyConfig();
-				if (jep_python_home == null)
-					jep_python_home = System.getenv("JEP_PYTHON_HOME");
-				config.setPythonHome(jep_python_home);
-				MainInterpreter.setInitParams(config);
-				
-				if (jep_library_path == null) {
-					jep_library_path = System.getenv("JEP_LIBRARY_PATH");
-				}
-				MainInterpreter.setJepLibraryPath(jep_library_path);
-				interp = new SharedInterpreter();
 				interp.exec("import os");
 				interp.exec("import sys");
-				interp.exec("sys.path.append('" + tempFolder.toAbsolutePath().toString() + "/python/')");
+				interp.exec(
+						"sys.path.append('" + tempFolder.toAbsolutePath().toString() + "/python/')");
 				interp.exec("from model import DeepEosModel");
 				interp.exec(String.format("model = DeepEosModel(model_base_path='%s', window_size=%d)", modelConfig.basePath, modelConfig.windowSize));
 			}
@@ -111,10 +89,9 @@ public class DeepEosTagger extends CasAnnotator_ImplBase {
 	}
 	
 	@Override
-	public void process(CAS cas) throws AnalysisEngineProcessException {
-		String documentText = cas.getDocumentText();
+	public void process(JCas jCas) throws AnalysisEngineProcessException {
+		String documentText = jCas.getDocumentText();
 		try {
-			JCas jCas = cas.getJCas();
 			ArrayList<Long> result = (ArrayList<Long>) interp.invoke("model.tag", documentText);
 			int begin = 0;
 			for (int i = 0; i < result.size(); i++) {
@@ -137,18 +114,11 @@ public class DeepEosTagger extends CasAnnotator_ImplBase {
 			}
 		} catch (JepException | ClassCastException e) {
 			throw new AnalysisEngineProcessException(e);
-		} catch (CASException e) {
-			e.printStackTrace();
 		}
 	}
 	
 	@Override
 	public void destroy() {
-		try {
-			this.interp.close();
-		} catch (JepException e) {
-			e.printStackTrace();
-		}
 		try {
 			if (tempFolder != null) {
 				FileSystemUtils.deleteRecursively(tempFolder.toFile());
