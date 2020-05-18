@@ -31,7 +31,6 @@ class DeepEosModel:
             self.deep_eos_model = load_model(model_base_path + ".hdf5")
         else:
             self.deep_eos_model = load_model(model_base_path + ".model")
-        self.deep_eos_graph = tf.get_default_graph()
         self.window_size = window_size
         self.batch_size = batch_size
         print(self.deep_eos_model.summary())
