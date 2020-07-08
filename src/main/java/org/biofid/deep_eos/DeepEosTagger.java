@@ -6,9 +6,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.uima.UimaContext;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
-import org.apache.uima.cas.CAS;
-import org.apache.uima.cas.CASException;
-import org.apache.uima.fit.component.CasAnnotator_ImplBase;
 import org.apache.uima.fit.descriptor.ConfigurationParameter;
 import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
@@ -50,6 +47,27 @@ public class DeepEosTagger extends JepAnnotator {
 	@Override
 	public void initialize(UimaContext context) throws ResourceInitializationException {
 		super.initialize(context);
+		if (envName == null || envName.isEmpty()) {
+			envName = "textimager_py37_tensorflow==2.2.0";
+		}
+		if (envPythonVersion == null || envPythonVersion.isEmpty()) {
+			envPythonVersion = "3.7";
+		}
+		if (envDepsConda == null || envDepsConda.isEmpty()) {
+			envDepsConda = "";
+		}
+		if (envDepsPip == null || envDepsPip.isEmpty()) {
+			envDepsPip = "tensorflow==2.2.0 numpy";
+		}
+		if (condaVersion == null || condaVersion.isEmpty()) {
+			condaVersion = "py37_4.8.3";
+		}
+		if (condaBashScript == null || condaBashScript.isEmpty()) {
+			condaBashScript = "deep_eos_setup.sh";
+		}
+		
+		super.initConda();
+		
 		try {
 			tempFolder = Files.createTempDirectory(this.getClass().getSimpleName());
 			Properties modelProperties = loadModelProperties();
@@ -58,12 +76,11 @@ public class DeepEosTagger extends JepAnnotator {
 			} else {
 				extractResources();
 				ModelConfig modelConfig = new ModelConfig(modelProperties, modelname);
-				interp.exec("import os");
-				interp.exec("import sys");
-				interp.exec(
-						"sys.path.append('" + tempFolder.toAbsolutePath().toString() + "/python/')");
-				interp.exec("from model import DeepEosModel");
-				interp.exec(String.format("model = DeepEosModel(model_base_path='%s', window_size=%d)", modelConfig.basePath, modelConfig.windowSize));
+				interpreter.exec("import os");
+				interpreter.exec("import sys");
+				interpreter.exec("sys.path.append('" + tempFolder.toAbsolutePath().toString() + "/python/')");
+				interpreter.exec("from model import DeepEosModel");
+				interpreter.exec(String.format("model = DeepEosModel(model_base_path='%s', window_size=%d)", modelConfig.basePath, modelConfig.windowSize));
 			}
 		} catch (Exception e) {
 			throw new ResourceInitializationException(e);
@@ -92,7 +109,7 @@ public class DeepEosTagger extends JepAnnotator {
 	public void process(JCas jCas) throws AnalysisEngineProcessException {
 		String documentText = jCas.getDocumentText();
 		try {
-			ArrayList<Long> result = (ArrayList<Long>) interp.invoke("model.tag", documentText);
+			ArrayList<Long> result = (ArrayList<Long>) interpreter.invoke("model.tag", documentText);
 			int begin = 0;
 			for (int i = 0; i < result.size(); i++) {
 				Long end = result.get(i);

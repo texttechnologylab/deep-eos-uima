@@ -22,7 +22,6 @@ public class TestDeepEosTagger {
 	public static void setUpClass() throws ResourceInitializationException {
 		engine = AnalysisEngineFactory.createEngine(DeepEosTagger.class,
 				DeepEosTagger.PARAM_MODEL_NAME, "biofid",
-				DeepEosTagger.PARAM_PYTHON_HOME, System.getenv("HOME") + "/anaconda3/envs/keras",
 				DeepEosTagger.PARAM_VERBOSE, true);
 	}
 	
