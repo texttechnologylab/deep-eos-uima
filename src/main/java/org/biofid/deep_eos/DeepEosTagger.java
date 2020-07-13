@@ -6,6 +6,9 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.uima.UimaContext;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
+import org.apache.uima.cas.CAS;
+import org.apache.uima.cas.CASException;
+import org.apache.uima.fit.component.CasAnnotator_ImplBase;
 import org.apache.uima.fit.descriptor.ConfigurationParameter;
 import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
@@ -41,50 +44,48 @@ public class DeepEosTagger extends JepAnnotator {
 	)
 	private Boolean verbose;
 	
-	private static final String[] resourceFiles = new String[]{"python/model.py", "python/utils.py"};
+	private static final String[] resourceFiles = new String[]{"python/model_deepeos.py", "python/utils_deepeos.py","python/__init__.py"};
 	private Path tempFolder;
 	
 	@Override
-	public void initialize(UimaContext context) throws ResourceInitializationException {
-		super.initialize(context);
+	public void initialize(UimaContext aContext) throws ResourceInitializationException {
+		super.initialize(aContext);
+
 		if (envName == null || envName.isEmpty()) {
-			envName = "textimager_py37_tensorflow==2.2.0";
+			envName = "textimager_deepeos_py362";
 		}
 		if (envPythonVersion == null || envPythonVersion.isEmpty()) {
-			envPythonVersion = "3.7";
+			envPythonVersion = "3.6";
 		}
 		if (envDepsConda == null || envDepsConda.isEmpty()) {
 			envDepsConda = "";
 		}
 		if (envDepsPip == null || envDepsPip.isEmpty()) {
-			envDepsPip = "tensorflow==2.2.0 numpy";
+			envDepsPip = "tensorflow==1.5.0 uarray==0.6.0 keras==2.1.5 h5py==2.10.0";
 		}
 		if (condaVersion == null || condaVersion.isEmpty()) {
 			condaVersion = "py37_4.8.3";
 		}
-		if (condaBashScript == null || condaBashScript.isEmpty()) {
-			condaBashScript = "deep_eos_setup.sh";
-		}
 		
-		super.initConda();
-		
+		initConda();
 		try {
 			tempFolder = Files.createTempDirectory(this.getClass().getSimpleName());
 			Properties modelProperties = loadModelProperties();
-			if (!modelProperties.containsKey(modelname + ".model")) {
-				throw new Exception("The language '" + modelname + "' is not a valid DeepEOS model language!");
-			} else {
-				extractResources();
-				ModelConfig modelConfig = new ModelConfig(modelProperties, modelname);
-				interpreter.exec("import os");
-				interpreter.exec("import sys");
-				interpreter.exec("sys.path.append('" + tempFolder.toAbsolutePath().toString() + "/python/')");
-				interpreter.exec("from model import DeepEosModel");
-				interpreter.exec(String.format("model = DeepEosModel(model_base_path='%s', window_size=%d)", modelConfig.basePath, modelConfig.windowSize));
-			}
-		} catch (Exception e) {
+			extractResources();
+			ModelConfig modelConfig = new ModelConfig(modelProperties, modelname);
+			interpreter.exec("import os");
+			interpreter.exec("import sys");
+			
+			interpreter.exec("sys.path.append('" + tempFolder.toAbsolutePath().toString() + "/python/')");
+			System.out.println(tempFolder.toAbsolutePath().toString() );
+			interpreter.exec("from model_deepeos import DeepEosModel");
+			interpreter.exec(String.format("model = DeepEosModel(model_base_path='%s', window_size=%d)", modelConfig.basePath, modelConfig.windowSize));
+
+		} 
+		catch (IOException | JepException e) {
 			throw new ResourceInitializationException(e);
 		}
+		
 	}
 	
 	private void extractResources() throws IOException {
