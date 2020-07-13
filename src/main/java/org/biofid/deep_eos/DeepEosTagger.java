@@ -77,10 +77,8 @@ public class DeepEosTagger extends JepAnnotator {
 			interpreter.exec("import sys");
 			
 			interpreter.exec("sys.path.append('" + tempFolder.toAbsolutePath().toString() + "/python/')");
-			System.out.println(tempFolder.toAbsolutePath().toString() );
 			interpreter.exec("from model_deepeos import DeepEosModel");
 			interpreter.exec(String.format("model = DeepEosModel(model_base_path='%s', window_size=%d)", modelConfig.basePath, modelConfig.windowSize));
-
 		} 
 		catch (IOException | JepException e) {
 			throw new ResourceInitializationException(e);

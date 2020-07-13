@@ -21,7 +21,7 @@ public class TestDeepEosTagger {
 	@BeforeClass
 	public static void setUpClass() throws ResourceInitializationException {
 		engine = AnalysisEngineFactory.createEngine(DeepEosTagger.class,
-				DeepEosTagger.PARAM_MODEL_NAME, "biofid",
+				DeepEosTagger.PARAM_MODEL_NAME, "de",
 				DeepEosTagger.PARAM_VERBOSE, true);
 	}
 	
