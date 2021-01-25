@@ -6,11 +6,10 @@
 	<parent>
 		<groupId>org.hucompute.textimager.uima</groupId>
 		<artifactId>textimager-uima</artifactId>
-		<version>0.2.7</version>
+		<version>0.3.0</version>
 	</parent>
 
     <artifactId>textimager-uima-deep-eos</artifactId>
-    <version>1.2.1</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -21,7 +20,7 @@
     	<dependency>
 			<groupId>org.hucompute.textimager.uima</groupId>
 			<artifactId>textimager-uima-base-annotators</artifactId>
-			<version>0.2.7</version>
+			<version>${project.version}</version>
 		</dependency>
         <dependency>
             <groupId>commons-cli</groupId>
@@ -84,7 +83,7 @@
         <dependency>
             <groupId>com.github.texttechnologylab</groupId>
             <artifactId>UIMATypeSystem</artifactId>
-            <version>1.8.2</version>
+            <version>${ttlab.typesystem.version}</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
