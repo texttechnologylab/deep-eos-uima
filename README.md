@@ -1,7 +1,8 @@
 # Deep-EOS UIMA
 
-[TextImager](https://github.com/texttechnologylab/textimager-uima) annotator wrapper around [General-Purpose Neural Networks for Sentence Boundary Detection](https://github.com/dbmdz/deep-eos) (`deep-eos`)
+[TextImager](https://github.com/texttechnologylab/textimager-uima) annotator wrapper around [General-Purpose Neural Networks for Sentence Boundary Detection](https://github.com/dbmdz/deep-eos) (`deep-eos`) created for the [BIOfid](https://www.biofid.de/en/) project
 
+[![BIOfid](http://img.shields.io/badge/project-BIOfid-4C7828.svg)](https://www.biofid.de/en/)
 [![Conference](http://img.shields.io/badge/conference-KONVENS_2019-4b44ce.svg)](https://konvens.org/proceedings/2019/)
 [![Paper](http://img.shields.io/badge/paper-KONVENS_Proceedings-B31B1B.svg)](https://konvens.org/proceedings/2019/papers/KONVENS2019_paper_41.pdf)
 [![version](https://img.shields.io/github/license/texttechnologylab/deep-eos-uima)]()
