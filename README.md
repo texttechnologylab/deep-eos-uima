@@ -4,6 +4,8 @@
 
 [![Conference](http://img.shields.io/badge/conference-KONVENS_2019-4b44ce.svg)](https://konvens.org/proceedings/2019/)
 [![Paper](http://img.shields.io/badge/paper-KONVENS_Proceedings-B31B1B.svg)](https://konvens.org/proceedings/2019/papers/KONVENS2019_paper_41.pdf)
+[![version](https://img.shields.io/github/license/texttechnologylab/deep-eos-uima)]()
+[![latest](https://img.shields.io/github/v/release/texttechnologylab/deep-eos-uima)]()
 
 ## Description
 
